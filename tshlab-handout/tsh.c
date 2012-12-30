@@ -227,6 +227,18 @@ eval(char *cmdline)
 	printf("tok builtin FG\n");
 	else {
 	printf("tok builtin none\n");
+	if (bg == -1) return;               /* parsing error */
+    
+   
+    if (tok.argv[0] == NULL)  return;   /* ignore empty lines */
+	sigset_t mask;
+		sigemptyset(&mask);
+		sigaddset(&mask, SIGCHLD);
+		sigaddset(&mask, SIGINT);
+		sigaddset(&mask, SIGTSTP);
+		sigprocmask(SIG_BLOCK, &mask, NULL);//block SIGCHLD
+		
+	
 	 /* Child runs user job */
      if ((pid = Fork()) == 0) {
 	
@@ -239,10 +251,14 @@ eval(char *cmdline)
 	   printf("%s: Command  found.\n", *(tok.argv));
 	 }
 	}// end child
-	
+	addjob(job_list, pid, bg + 1, cmdline);
+
+		sigprocmask(SIG_UNBLOCK, &mask, NULL);
+	int jid = pid2jid(pid);
     // run in background
-      else  if (bg == 1){
-			 printf("eval >>>>run in bg, bg ,%d\n",bg);
+      if (bg == 1){
+			printf( "[%d] (%d) %s\n", jid, pid, cmdline);
+			// fprintf(stdout, "[%d] (%d) %s\n", jid, pid, cmdline);
 			 
 		}
 		//run in foreground
@@ -254,6 +270,8 @@ eval(char *cmdline)
 
 			
 		}
+		
+	
 	
 	}
      
@@ -261,10 +279,7 @@ eval(char *cmdline)
      
       // printf("eval >>>> tok argv ,%s  %s  %s\n",*(tok.argv),*(tok.argv+1),*(tok.argv+2));
      
-    if (bg == -1) return;               /* parsing error */
     
-   
-    if (tok.argv[0] == NULL)  return;   /* ignore empty lines */
 
     return;
 }
